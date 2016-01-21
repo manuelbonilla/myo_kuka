@@ -7,7 +7,7 @@
 #include <lwr_controllers/PoseRPY.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float64MultiArray.h>
-#include <geometry_msgs/Twist>
+#include <geometry_msgs/Twist.h>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>

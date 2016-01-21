@@ -169,7 +169,7 @@ namespace myo_kuka
 
   }
 
-  void TeleoperationController::command(const geometry_smgs::Twist::ConstPtr &msg)
+  void TeleoperationController::command(const geometry_msgs::Twist::ConstPtr &msg)
   { 
     KDL::Frame frame_des_;
 
