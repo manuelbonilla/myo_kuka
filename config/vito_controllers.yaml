@@ -1,0 +1,69 @@
+left_arm:
+  # CONTROLLERS USED IN THE EXAMLE
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 100
+  joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - left_arm_a1_joint
+      - left_arm_a2_joint
+      - left_arm_e1_joint
+      - left_arm_a3_joint
+      - left_arm_a4_joint
+      - left_arm_a5_joint
+      - left_arm_a6_joint
+
+  PotentialFieldControl:
+    type: desperate_housewife/PotentialFieldControl
+    root_name: vito_anchor
+    tip_name: left_hand_palm_ref_link
+    desired_reference_topic: desired_hand_left_pose
+    obstacle_remove_topic: Reject_obstacle_list_left
+    obstacle_avoidance: obstacle_pose_left
+    set_gains_topic: set_gains_left
+    time_interp_desired: 2
+    percentage: 0.5
+
+  one_task_inverse_dynamics_jl:
+    type: lwr_controllers/OneTaskInverseDynamicsJL
+    root_name: vito_anchor
+    tip_name: left_hand_palm_ref_link
+
+right_arm:
+  # CONTROLLERS USED IN THE EXAMLE
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 100  
+
+  PotentialFieldControl:
+    type: desperate_housewife/PotentialFieldControl
+    root_name: vito_anchor
+    tip_name: right_hand_palm_ref_link
+    desired_reference_topic: desired_hand_right_pose
+    obstacle_remove_topic: Reject_obstacle_list_right
+    obstacle_avoidance: obstacle_pose_right
+    set_gains_topic: set_gains_right
+    time_interp_desired: 2
+    percentage: 0.5
+
+  joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - right_arm_a1_joint
+      - right_arm_a2_joint
+      - right_arm_e1_joint
+      - right_arm_a3_joint
+      - right_arm_a4_joint
+      - right_arm_a5_joint
+      - right_arm_a6_joint
+
+  one_task_inverse_dynamics_jl:
+    type: lwr_controllers/OneTaskInverseDynamicsJL
+    root_name: vito_anchor
+    tip_name: right_hand_palm_ref_link
+
+  teleoperation_controller:
+    type: myo_kuka/TeleoperationController
+    root_name: vito_anchor
+    tip_name: right_hand_palm_ref_link

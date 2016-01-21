@@ -7,6 +7,7 @@
 #include <lwr_controllers/PoseRPY.h>
 #include <visualization_msgs/Marker.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <geometry_msgs/Twist>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>
@@ -23,7 +24,7 @@ namespace myo_kuka
 		bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
 		void starting(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
-		void command(const lwr_controllers::PoseRPY::ConstPtr &msg);
+		void command(const geometry_msgs::Twist::ConstPtr &msg);
 			double task_objective_function(KDL::JntArray q);
 
 	private:

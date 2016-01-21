@@ -169,40 +169,19 @@ namespace myo_kuka
 
   }
 
-  void TeleoperationController::command(const lwr_controllers::PoseRPY::ConstPtr &msg)
+  void TeleoperationController::command(const geometry_smgs::Twist::ConstPtr &msg)
   { 
     KDL::Frame frame_des_;
 
-    switch(msg->id)
-    {
-      case 0:
-      frame_des_ = KDL::Frame(
-          KDL::Rotation::RPY(msg->orientation.roll,
-                    msg->orientation.pitch,
-                    msg->orientation.yaw),
-          KDL::Vector(msg->position.x,
-                msg->position.y,
-                msg->position.z));
-      break;
-  
-      case 1: // position only
-      frame_des_ = KDL::Frame(
-        KDL::Vector(msg->position.x,
-              msg->position.y,
-              msg->position.z));
-      break;
     
-      case 2: // orientation only
       frame_des_ = KDL::Frame(
-        KDL::Rotation::RPY(msg->orientation.roll,
-                     msg->orientation.pitch,
-                   msg->orientation.yaw));
-      break;
+          KDL::Rotation::RPY(msg->angular.x,
+                    msg->angular.y,
+                    msg->angular.z),
+          KDL::Vector(msg->linear.x,
+                msg->linear.y,
+                msg->linear.z));
 
-      default:
-      ROS_INFO("Wrong message ID");
-      return;
-    }
     x_des_ = frame_des_;
 
     first_step_ = 1;
