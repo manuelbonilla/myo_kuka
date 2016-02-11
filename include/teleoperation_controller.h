@@ -1,13 +1,18 @@
 #ifndef TELEOPERATIONCONTROLLER_H
 #define TELEOPERATIONCONTROLLER_H
 
-#include <lwr_controllers/PIDKinematicChainControllerBase.h>
-#include <lwr_controllers/MultiPriorityTask.h>
 
+#include <lwr_controllers/KinematicChainControllerBase.h>
 #include <lwr_controllers/PoseRPY.h>
+
 #include <visualization_msgs/Marker.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Pose.h>
+
+
+#include <kdl/chainfksolverpos_recursive.hpp>
+#include <kdl/chainiksolvervel_pinv.hpp>
+#include <kdl/chainiksolverpos_nr_jl.hpp>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>
@@ -15,76 +20,47 @@
 
 namespace myo_kuka
 {
-	class TeleoperationController: public controller_interface::PIDKinematicChainControllerBase<hardware_interface::EffortJointInterface>
+	class TeleoperationController: public controller_interface::KinematicChainControllerBase<hardware_interface::PositionJointInterface>
 	{
 	public:
 		TeleoperationController();
 		~TeleoperationController();
 
-		bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
+		bool init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n);
 		void starting(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
-		void command(const geometry_msgs::Twist::ConstPtr &msg);
-			double task_objective_function(KDL::JntArray q);
+		void command(const geometry_msgs::Pose::ConstPtr &msg);
 
 	private:
 		ros::Subscriber sub_command_;
-		ros::Publisher pub_error_;
+		ros::Subscriber sub_gains_;
 
-
-		std_msgs::Float64MultiArray msg_err_;
-		
-        
-		KDL::JntArray qdot_last_;
-
-		KDL::Frame x_,x0_;	//current e-e pose
-		Eigen::Matrix<double,6,1> x_dot_;	//current e-e velocity
-
+		KDL::Frame x_;		//current pose
 		KDL::Frame x_des_;	//desired pose
-		KDL::Twist x_des_dot_;
-		KDL::Twist x_des_dotdot_;
 
 		KDL::Twist x_err_;
 
-		KDL::JntArray Kp_,Kd_;
+		KDL::JntArray q_cmd_; // computed set points
 
-		KDL::JntArray tau_;
-
-		KDL::JntSpaceInertiaMatrix M_;	// intertia matrix
-		KDL::JntArray C_;	// coriolis
-		KDL::JntArray G_;	// gravity
-
-		KDL::Jacobian J_;	//Jacobian J(q)
-		KDL::Jacobian J_last_;	//Jacobian of the last step
-		KDL::Jacobian J_dot_;	//d/dt(J(q))
-		KDL::Jacobian J_star_; // it will be J_*P_
+		KDL::Jacobian J_;	//Jacobian
 
 		Eigen::MatrixXd J_pinv_;
+		Eigen::Matrix<double,3,3> skew_;
 
-		Eigen::Matrix<double,6,1> e_ref_;
-		Eigen::Matrix<double,7,7> I_;
-		Eigen::Matrix<double,7,7> N_trans_;
-		Eigen::MatrixXd M_inv_;
-		Eigen::MatrixXd omega_;
-		Eigen::MatrixXd lambda_;
-		Eigen::Matrix<double,6,1> b_;
+		struct quaternion_
+		{
+			KDL::Vector v;
+			double a;
+		} quat_curr_, quat_des_;
 
-		double phi_;	
-		double phi_last_;
-
-		int step_;
-		int first_step_;
-		int msg_id_;
+		KDL::Vector v_temp_;
+		
 		int cmd_flag_;
-		int ntasks_;
-		int links_index_;
-
-
+		
 		boost::scoped_ptr<KDL::ChainJntToJacSolver> jnt_to_jac_solver_;
-		boost::scoped_ptr<KDL::ChainDynParam> id_solver_;
 		boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
-		//boost::scoped_ptr<KDL::ChainFkSolverVel_recursive> fk_vel_solver_;
-		//boost::scoped_ptr<KDL::ChainFkSolverAcc_recursive> fk_acc_solver_;
+		boost::scoped_ptr<KDL::ChainIkSolverVel_pinv> ik_vel_solver_;
+		boost::scoped_ptr<KDL::ChainIkSolverPos_NR_JL> ik_pos_solver_;
 	};
 
 }

@@ -1,3 +1,4 @@
+
 #include <teleoperation_controller.h>
 #include <utils/pseudo_inversion.h>
 #include <utils/skew_symmetric.h>
@@ -8,201 +9,146 @@
 
 #include <math.h>
 
-namespace myo_kuka 
+namespace myo_kuka
 {
-  TeleoperationController::TeleoperationController() {}
-  TeleoperationController::~TeleoperationController() {}
+    TeleoperationController::TeleoperationController() {}
+    TeleoperationController::~TeleoperationController() {}
 
-  bool TeleoperationController::init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n)
-  {
-        KinematicChainControllerBase<hardware_interface::EffortJointInterface>::init(robot, n);
-
-    jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
-    id_solver_.reset(new KDL::ChainDynParam(kdl_chain_,gravity_));
-    fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
-        
-    qdot_last_.resize(kdl_chain_.getNrOfJoints());
-    tau_.resize(kdl_chain_.getNrOfJoints());
-    J_.resize(kdl_chain_.getNrOfJoints());
-    J_dot_.resize(kdl_chain_.getNrOfJoints());
-    J_star_.resize(kdl_chain_.getNrOfJoints());
-    Kp_.resize(kdl_chain_.getNrOfJoints());
-    Kd_.resize(kdl_chain_.getNrOfJoints());
-    M_.resize(kdl_chain_.getNrOfJoints());
-    C_.resize(kdl_chain_.getNrOfJoints());
-    G_.resize(kdl_chain_.getNrOfJoints());
-
-    J_last_.resize(kdl_chain_.getNrOfJoints());
-
-    sub_command_ = nh_.subscribe("command", 1, &TeleoperationController::command, this);
-    pub_error_ = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
-    // pub_pose_ = nh_.advertise<std_msgs::Float64MultiArray>("pose", 1000);
-    // pub_marker_ = nh_.advertise<visualization_msgs::Marker>("marker",1000);
-
-
-    return true;
-  }
-
-  void TeleoperationController::starting(const ros::Time& time)
-  {
-    // get joint positions
-      for(unsigned int i=0; i < joint_handles_.size(); i++) 
-      {
-        joint_msr_states_.q(i) = joint_handles_[i].getPosition();
-        joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
-        joint_des_states_.q(i) = joint_msr_states_.q(i);
-        joint_des_states_.qdot(i) = joint_msr_states_.qdot(i);
-        Kp_(i) = 50;
-        Kd_(i) = 10;
-      }
-
-      I_ = Eigen::Matrix<double,7,7>::Identity(7,7);
-      e_ref_ = Eigen::Matrix<double,6,1>::Zero();
-      fk_pos_solver_->JntToCart(joint_msr_states_.q,x_des_);
-
-      first_step_ = 1;
-      cmd_flag_ = 0;
-      step_ = 0;
-
-  }
-
-  void TeleoperationController::update(const ros::Time& time, const ros::Duration& period)
-  {
-    // get joint positions
-
-
-      for(unsigned int i=0; i < joint_handles_.size(); i++) 
-      {
-        joint_msr_states_.q(i) = joint_handles_[i].getPosition();
-        joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
-      }
-
-      // clearing msgs before publishing
-      msg_err_.data.clear();
-      // msg_pose_.data.clear();
-      
-      // if (cmd_flag_)
-      // {
-      // resetting N and tau(t=0) for the highest priority task
-      N_trans_ = I_;  
-      SetToZero(tau_);
-
-      // computing Inertia, Coriolis and Gravity matrices
-      id_solver_->JntToMass(joint_msr_states_.q, M_);
-      id_solver_->JntToCoriolis(joint_msr_states_.q, joint_msr_states_.qdot, C_);
-      id_solver_->JntToGravity(joint_msr_states_.q, G_);
-      G_.data.setZero();
-
-      // computing the inverse of M_ now, since it will be used often
-      pseudo_inverse(M_.data,M_inv_,false); //M_inv_ = M_.data.inverse(); 
-
-
-      // computing Jacobian J(q)
-      jnt_to_jac_solver_->JntToJac(joint_msr_states_.q,J_);
-
-      // computing the distance from the mid points of the joint ranges as objective function to be minimized
-      phi_ = task_objective_function(joint_msr_states_.q);
-
-      fk_pos_solver_->JntToCart(joint_msr_states_.q,x_);
-
-      // using the first step to compute jacobian of the tasks
-      if (first_step_ == 1)
-      {
-        J_last_ = J_;
-        phi_last_ = phi_;
-        first_step_ = 0;
-        return;
-      }
-
-      // std::cout << "timer: " << timer_control_.toSec() << std::endl;
-      // computing the derivative of Jacobian J_dot(q) through numerical differentiation
-      J_dot_.data = (J_.data - J_last_.data)/period.toSec();
-
-      // computing forward kinematics
-      // set_marker(x_,msg_id_);
-
-      // computing end-effector position/orientation error w.r.t. desired frame
-
-      x_err_ = diff(x_,x_des_);
-      
-
-      x_dot_ = J_.data*joint_msr_states_.qdot.data;     
-
-      // setting error reference
-      for(unsigned int i = 0; i < e_ref_.size(); i++)
-      {
-        // e = x_des_dotdot + Kd*(x_des_dot - x_dot) + Kp*(x_des - x)
-        e_ref_(i) =  -Kd_(i)*(x_dot_(i)) + Kp_(i)*x_err_(i);
-        msg_err_.data.push_back(x_err_(i));
-      }
-
-      // computing b = J*M^-1*(c+g) - J_dot*q_dot
-      b_ = J_.data*M_inv_*(C_.data + G_.data) - J_dot_.data*joint_msr_states_.qdot.data;
-
-      // computing omega = J*M^-1*N^T*J
-      omega_ = J_.data*M_inv_*N_trans_*J_.data.transpose();
-
-      // computing lambda = omega^-1
-      pseudo_inverse(omega_,lambda_);
-      //lambda_ = omega_.inverse();
-
-      // computing nullspace
-      N_trans_ = N_trans_ - J_.data.transpose()*lambda_*J_.data*M_inv_;           
-
-      // finally, computing the torque tau
-      tau_.data = J_.data.transpose()*lambda_*(e_ref_ + b_);// + N_trans_*(Eigen::Matrix<double,7,1>::Identity(7,1)*(phi_ - phi_last_)/(period.toSec()));
-
-      // saving J_ and phi of the last iteration
-      J_last_ = J_;
-      phi_last_ = phi_;
-  
-
-      // set controls for joints
-      for (unsigned int i = 0; i < joint_handles_.size(); i++)
-      {
-          joint_handles_[i].setCommand(tau_(i));
-      }
-
-      // publishing error 
-      pub_error_.publish(msg_err_);
-      ros::spinOnce();
-
-  }
-
-  void TeleoperationController::command(const geometry_msgs::Twist::ConstPtr &msg)
-  { 
-    KDL::Frame frame_des_;
-
-    
-      frame_des_ = KDL::Frame(
-          KDL::Rotation::RPY(msg->angular.x,
-                    msg->angular.y,
-                    msg->angular.z),
-          KDL::Vector(msg->linear.x,
-                msg->linear.y,
-                msg->linear.z));
-
-    x_des_ = frame_des_;
-
-    first_step_ = 1;
-  }
-
-  double TeleoperationController::task_objective_function(KDL::JntArray q)
-  {
-    double sum = 0;
-    double temp;
-    int N = q.data.size();
-
-    for (int i = 0; i < N; i++)
+    bool TeleoperationController::init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n)
     {
-      temp = ((q(i) - joint_limits_.center(i))/(joint_limits_.max(i) - joint_limits_.min(i)));
-      sum += temp*temp;
+        if( !(KinematicChainControllerBase<hardware_interface::PositionJointInterface>::init(robot, n)) )
+        {
+            ROS_ERROR("Couldn't initilize OneTaskInverseKinematics controller.");
+            return false;
+        }
+
+        jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
+        fk_pos_solver_.reset(new KDL::ChainFkSolverPos_recursive(kdl_chain_));
+        ik_vel_solver_.reset(new KDL::ChainIkSolverVel_pinv(kdl_chain_));
+        ik_pos_solver_.reset(new KDL::ChainIkSolverPos_NR_JL(kdl_chain_,joint_limits_.min,joint_limits_.max,*fk_pos_solver_,*ik_vel_solver_));
+
+        q_cmd_.resize(kdl_chain_.getNrOfJoints());
+        J_.resize(kdl_chain_.getNrOfJoints());
+
+        // get joint positions
+        for(int i=0; i < joint_handles_.size(); i++)
+        {
+            joint_msr_states_.q(i) = joint_handles_[i].getPosition();
+            joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
+            joint_des_states_.q(i) = joint_msr_states_.q(i);
+        }
+
+        // computing forward kinematics
+        fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
+        fk_pos_solver_->JntToCart(joint_msr_states_.q, x_des_);
+
+        //Desired posture is the current one
+        x_des_ = x_;
+
+        cmd_flag_ = 0;
+
+        sub_command_ = nh_.subscribe("command", 1, &TeleoperationController::command, this);
+
+        return true;
     }
 
-    sum /= 2*N;
+    void TeleoperationController::starting(const ros::Time& time)
+    {
 
-    return -sum;
-  }
+    }
+
+    void TeleoperationController::update(const ros::Time& time, const ros::Duration& period)
+    {
+
+        // get joint positions
+        for(int i=0; i < joint_handles_.size(); i++)
+        {
+            joint_msr_states_.q(i) = joint_handles_[i].getPosition();
+        }
+
+        if (cmd_flag_)
+        {
+            // computing Jacobian
+            jnt_to_jac_solver_->JntToJac(joint_msr_states_.q, J_);
+
+            // computing J_pinv_
+            pseudo_inverse(J_.data, J_pinv_);
+
+            // computing forward kinematics
+            fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
+
+            // end-effector position error
+            x_err_.vel = x_des_.p - x_.p;
+
+            // getting quaternion from rotation matrix
+            x_.M.GetQuaternion(quat_curr_.v(0),quat_curr_.v(1),quat_curr_.v(2),quat_curr_.a);
+            x_des_.M.GetQuaternion(quat_des_.v(0),quat_des_.v(1),quat_des_.v(2),quat_des_.a);
+
+            skew_symmetric(quat_des_.v, skew_);
+
+            for (int i = 0; i < skew_.rows(); i++)
+            {
+                v_temp_(i) = 0.0;
+                for (int k = 0; k < skew_.cols(); k++)
+                    v_temp_(i) += skew_(i,k)*(quat_curr_.v(k));
+            }
+
+            // end-effector orientation error
+            x_err_.rot = quat_curr_.a*quat_des_.v - quat_des_.a*quat_curr_.v - v_temp_;
+
+            // computing q_dot
+            for (int i = 0; i < J_pinv_.rows(); i++)
+            {
+                joint_des_states_.qdot(i) = 0.0;
+                for (int k = 0; k < J_pinv_.cols(); k++)
+                    joint_des_states_.qdot(i) += J_pinv_(i,k)*x_err_(k); //removed scaling factor of .7
+          
+            }
+
+            // integrating q_dot -> getting q (Euler method)
+            for (int i = 0; i < joint_handles_.size(); i++)
+                joint_des_states_.q(i) += period.toSec()*joint_des_states_.qdot(i);
+
+            // joint limits saturation
+            for (int i =0;  i < joint_handles_.size(); i++)
+            {
+                if (joint_des_states_.q(i) < joint_limits_.min(i))
+                    joint_des_states_.q(i) = joint_limits_.min(i);
+                if (joint_des_states_.q(i) > joint_limits_.max(i))
+                    joint_des_states_.q(i) = joint_limits_.max(i);
+            }
+
+            if (Equal(x_, x_des_, 0.005))
+            {
+                ROS_INFO("On target");
+                cmd_flag_ = 0;
+            }
+        }
+
+        // set controls for joints
+        for (int i = 0; i < joint_handles_.size(); i++)
+        {
+            joint_handles_[i].setCommand(joint_des_states_.q(i));
+        }
+    }
+
+    void TeleoperationController::command(const geometry_msgs::Pose::ConstPtr &msg)
+    {
+        KDL::Frame frame_des_;
+
+
+            frame_des_ = KDL::Frame(
+                    KDL::Rotation::Quaternion(msg->orientation.x,
+                                      msg->orientation.y,
+                                      msg->orientation.z,
+                                      msg->orientation.w),
+                    KDL::Vector(msg->position.x,
+                                msg->position.y,
+                                msg->position.z));
+
+        x_des_ = frame_des_;
+        cmd_flag_ = 1;
+    }
 }
 
 PLUGINLIB_EXPORT_CLASS(myo_kuka::TeleoperationController, controller_interface::ControllerBase)
