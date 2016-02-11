@@ -48,6 +48,9 @@ namespace myo_kuka
         cmd_flag_ = 0;
 
         sub_command_ = nh_.subscribe("command", 1, &TeleoperationController::command, this);
+        //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationController::command2, this);
+        
+
 
         return true;
     }
@@ -149,6 +152,24 @@ namespace myo_kuka
         x_des_ = frame_des_;
         cmd_flag_ = 1;
     }
+
+ /*       void TeleoperationController::command2(const geometry_msgs::Pose::ConstPtr &msg)
+    {
+        KDL::Frame frame_des_2;
+
+
+            frame_des_2 = KDL::Frame(
+                    KDL::Rotation::Quaternion(msg->orientation.x,
+                                      msg->orientation.y,
+                                      msg->orientation.z,
+                                      msg->orientation.w),
+                    KDL::Vector(msg->position.x,
+                                msg->position.y,
+                                msg->position.z));
+
+        x_des_2 = frame_des_2;
+        cmd_flag_ = 1;
+    }*/
 }
 
 PLUGINLIB_EXPORT_CLASS(myo_kuka::TeleoperationController, controller_interface::ControllerBase)

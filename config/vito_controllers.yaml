@@ -67,3 +67,8 @@ right_arm:
     type: myo_kuka/TeleoperationController
     root_name: vito_anchor
     tip_name: right_hand_palm_ref_link
+
+  multi_task_inverse_priority_kinematics:
+    type: myo_kuka/MultiTaskPriorityInverseKinematics
+    root_name: vito_anchor
+    tip_name: right_hand_palm_ref_link

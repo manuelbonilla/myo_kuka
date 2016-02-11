@@ -67,7 +67,7 @@
 
         <!-- load Gazebo simulation environment -->
         <include file="$(find gazebo_ros)/launch/empty_world.launch">
-            <arg name="world_name" value="$(find vito_description)/worlds/simple_environment.world"/>
+            <arg name="world_name" value="$(find myo_kuka)/worlds/simple_environment.world"/>
             <arg name="paused" value="false"/>
             <!-- when using the real/sim scenario in parallel, set "use_enabled_time" to false -->
             <arg name="use_sim_time" value="true"/>
@@ -159,7 +159,7 @@
         </group>
 
         <!-- spawn only desired controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller"/>
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller multi_task_inverse_priority_kinematics"/>
         <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped PotentialFieldControl " />
 
     </group>
