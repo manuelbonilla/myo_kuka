@@ -30,6 +30,7 @@ namespace myo_kuka
 		ros::Subscriber sub_command_1, sub_command_2;
 		ros::Publisher pub_error_;
 		ros::Publisher pub_marker_;
+		ros::Publisher output_controller;
 
 		std_msgs::Float64MultiArray msg_err_;
 		visualization_msgs::MarkerArray msg_marker_;

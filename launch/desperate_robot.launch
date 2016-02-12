@@ -159,8 +159,8 @@
         </group>
 
         <!-- spawn only desired controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller multi_task_inverse_priority_kinematics"/>
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped PotentialFieldControl " />
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped PotentialFieldControl multi_task_inverse_priority_kinematics  " />
 
     </group>
 

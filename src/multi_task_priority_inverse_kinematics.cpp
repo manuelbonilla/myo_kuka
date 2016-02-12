@@ -34,6 +34,7 @@ namespace myo_kuka
 
 		sub_command_1 = nh_.subscribe("command1", 1, &MultiTaskPriorityInverseKinematics::command1, this);
 		sub_command_2 = nh_.subscribe("command2", 1, &MultiTaskPriorityInverseKinematics::command2, this);
+		output_controller = nh_.advertise<std_msgs::Float64MultiArray>("control_reference",1000);
 
 		pub_error_ = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
 		pub_marker_ = nh_.advertise<visualization_msgs::MarkerArray>("marker",1000);
@@ -126,10 +127,12 @@ namespace myo_kuka
     	}
 
     	// set controls for joints
+    	std_msgs::Float64MultiArray output_controller_msg;
     	for (int i = 0; i < joint_handles_.size(); i++)
     	{
     		//tau_cmd_(i) = PIDs_[i].computeCommand(joint_des_states_.q(i) - joint_msr_states_.q(i),joint_des_states_.qdot(i) - joint_msr_states_.qdot(i),period);
     		joint_handles_[i].setCommand(joint_des_states_.q(i));
+    		output_controller_msg.data.push_back(joint_des_states_.q(i));
     	}
 
     	// publishing markers for visualization in rviz
@@ -138,6 +141,7 @@ namespace myo_kuka
 
 	    // publishing error for all tasks as an array of ntasks*6
 	    pub_error_.publish(msg_err_);
+	    output_controller.publish(output_controller_msg);
 	    ros::spinOnce();
 
 	}
@@ -256,7 +260,7 @@ namespace myo_kuka
 
 	        x_des_[1] = frame_des_;
 	        on_target_flag_[1] = false;
-	        cmd_flag_ = 1;
+	        //cmd_flag_ = 1;
 	    }
 
 }
