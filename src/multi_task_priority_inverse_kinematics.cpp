@@ -12,9 +12,13 @@ namespace myo_kuka
 	MultiTaskPriorityInverseKinematics::MultiTaskPriorityInverseKinematics() {}
 	MultiTaskPriorityInverseKinematics::~MultiTaskPriorityInverseKinematics() {}
 
-	bool MultiTaskPriorityInverseKinematics::init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n)
+	bool MultiTaskPriorityInverseKinematics::init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n)
 	{
-        PIDKinematicChainControllerBase<hardware_interface::EffortJointInterface>::init(robot, n);
+         if( !(KinematicChainControllerBase<hardware_interface::PositionJointInterface>::init(robot, n)) )
+        {
+            ROS_ERROR("Couldn't initilize OneTaskInverseKinematics controller.");
+            return false;
+        }
 
 		jnt_to_jac_solver_.reset(new KDL::ChainJntToJacSolver(kdl_chain_));
 		id_solver_.reset(new KDL::ChainDynParam(kdl_chain_,gravity_));
@@ -22,8 +26,14 @@ namespace myo_kuka
 		tau_cmd_.resize(kdl_chain_.getNrOfJoints());
 		J_.resize(kdl_chain_.getNrOfJoints());
 		J_star_.resize(kdl_chain_.getNrOfJoints());
+		ntasks_ =1;
+					x_des_.resize(2);
+			links_index_.resize(2);
+			on_target_flag_.resize(2);
+			msg_marker_.markers.resize(2);
 
-		sub_command_ = nh_.subscribe("command", 1, &MultiTaskPriorityInverseKinematics::command, this);
+		sub_command_1 = nh_.subscribe("command1", 1, &MultiTaskPriorityInverseKinematics::command1, this);
+		sub_command_2 = nh_.subscribe("command2", 1, &MultiTaskPriorityInverseKinematics::command2, this);
 
 		pub_error_ = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
 		pub_marker_ = nh_.advertise<visualization_msgs::MarkerArray>("marker",1000);
@@ -118,8 +128,8 @@ namespace myo_kuka
     	// set controls for joints
     	for (int i = 0; i < joint_handles_.size(); i++)
     	{
-    		tau_cmd_(i) = PIDs_[i].computeCommand(joint_des_states_.q(i) - joint_msr_states_.q(i),joint_des_states_.qdot(i) - joint_msr_states_.qdot(i),period);
-    		joint_handles_[i].setCommand(tau_cmd_(i));
+    		//tau_cmd_(i) = PIDs_[i].computeCommand(joint_des_states_.q(i) - joint_msr_states_.q(i),joint_des_states_.qdot(i) - joint_msr_states_.qdot(i),period);
+    		joint_handles_[i].setCommand(joint_des_states_.q(i));
     	}
 
     	// publishing markers for visualization in rviz
@@ -139,10 +149,7 @@ namespace myo_kuka
 			ntasks_ = msg->links.size(); //nel nostro caso metteremo ntasks_ = 2
 			ROS_INFO("Number of tasks: %d",ntasks_);
 			// Dynamically resize desired postures and links index when a message arrives
-			x_des_.resize(ntasks_);
-			links_index_.resize(ntasks_);
-			on_target_flag_.resize(ntasks_);
-			msg_marker_.markers.resize(ntasks_);
+
 			msg_id_ = 0;
 
 			for (int i = 0; i < ntasks_; i++)
@@ -211,6 +218,47 @@ namespace myo_kuka
 				msg_marker_.markers[index].color.g = 1.0;
 				msg_marker_.markers[index].color.b = 0.0;	
 	}
+
+	void MultiTaskPriorityInverseKinematics::command1(const geometry_msgs::Pose::ConstPtr &msg)
+	    {
+	        KDL::Frame frame_des_;
+	        msg_id_ = 0;
+	        	links_index_[0] = -1;
+	            frame_des_ = KDL::Frame(
+	                    KDL::Rotation::Quaternion(msg->orientation.x,
+	                                      msg->orientation.y,
+	                                      msg->orientation.z,
+	                                      msg->orientation.w),
+	                    KDL::Vector(msg->position.x,
+	                                msg->position.y,
+	                                msg->position.z));
+
+	        x_des_[0] = frame_des_;
+	        on_target_flag_[0] = false;
+	        cmd_flag_ = 1;
+	    }
+
+	void MultiTaskPriorityInverseKinematics::command2(const geometry_msgs::Pose::ConstPtr &msg)
+	    {
+
+	    	ntasks_ = 2;
+	        KDL::Frame frame_des_;
+
+	        	links_index_[1] = 4;
+	            frame_des_ = KDL::Frame(
+	                    KDL::Rotation::Quaternion(msg->orientation.x,
+	                                      msg->orientation.y,
+	                                      msg->orientation.z,
+	                                      msg->orientation.w),
+	                    KDL::Vector(msg->position.x,
+	                                msg->position.y,
+	                                msg->position.z));
+
+	        x_des_[1] = frame_des_;
+	        on_target_flag_[1] = false;
+	        cmd_flag_ = 1;
+	    }
+
 }
 
 PLUGINLIB_EXPORT_CLASS(myo_kuka::MultiTaskPriorityInverseKinematics, controller_interface::ControllerBase)

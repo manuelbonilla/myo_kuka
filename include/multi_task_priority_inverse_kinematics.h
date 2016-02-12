@@ -1,7 +1,7 @@
 #ifndef LWR_CONTROLLERS__MULTI_TASK_PRIORITY_INVERSE_KINEMATICS_H
 #define LWR_CONTROLLERS__MULTI_TASK_PRIORITY_INVERSE_KINEMATICS_H
 
-#include <lwr_controllers/PIDKinematicChainControllerBase.h>
+#include <lwr_controllers/KinematicChainControllerBase.h>
 #include <lwr_controllers/MultiPriorityTask.h>
 
 #include <std_msgs/Float64MultiArray.h>
@@ -12,20 +12,22 @@
 
 namespace myo_kuka
 {
-	class MultiTaskPriorityInverseKinematics: public controller_interface::PIDKinematicChainControllerBase<hardware_interface::EffortJointInterface>
+	class MultiTaskPriorityInverseKinematics: public controller_interface::KinematicChainControllerBase<hardware_interface::PositionJointInterface>
 	{
 	public:
 		MultiTaskPriorityInverseKinematics();
 		~MultiTaskPriorityInverseKinematics();
 
-		bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
+		bool init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n);
 		void starting(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
 		void command(const lwr_controllers::MultiPriorityTask::ConstPtr &msg);
+		void command1(const geometry_msgs::Pose::ConstPtr &msg);
+		void command2(const geometry_msgs::Pose::ConstPtr &msg);
 		void set_marker(KDL::Frame x, int index, int id);
 
 	private:
-		ros::Subscriber sub_command_;
+		ros::Subscriber sub_command_1, sub_command_2;
 		ros::Publisher pub_error_;
 		ros::Publisher pub_marker_;
 

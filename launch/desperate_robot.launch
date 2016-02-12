@@ -186,21 +186,7 @@
         <!-- <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="true" output="screen" /> -->
     </group>
 
-    <include file="$(find desperate_housewife)/launch/desperate_demo_asus_head_vito_broadcaster.launch">
-        <arg name="start_openni2" value="$(arg start_openni2)"/>
-    </include>
-
-        
-    <include file="$(find desperate_housewife)/launch/desperate_demo_scene_filter.launch"/>
-
-    <include file="$(find desperate_housewife)/launch/desperate_demo_fit_geometries.launch"/>
-
-    <!-- <include file="$(find desperate_housewife)/launch/Desperate_pose_filter.launch"/> -->
-    <!-- <include file="$(find desperate_housewife)/launch/desperate_Vito_home.launch"/> -->
-    <include file="$(find desperate_housewife)/launch/desperate_mind.launch"/>
-   
-    <include file="$(find desperate_housewife)/launch/desperate_demo_hand_pose_generator.launch"/>
-
+    
     <node name="desperate_rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find desperate_housewife)/launch/rviz_config.rviz" output="screen"/>
 
 </launch>
