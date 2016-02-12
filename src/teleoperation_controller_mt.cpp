@@ -48,8 +48,11 @@ namespace myo_kuka
         cmd_flag_ = 0;
 
         sub_command_ = nh_.subscribe("command1", 1, &TeleoperationControllerMT::command, this);
-        sub_command_ = nh_.subscribe("command2", 1, &TeleoperationControllerMT::command2, this);
+        sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMT::command2, this);
         //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMT::command2, this);
+
+        nh_.param<double>("alpha1", alpha1, 1);
+        nh_.param<double>("alpha2", alpha2, 1);
         
 
         second_task = false;
@@ -105,16 +108,21 @@ namespace myo_kuka
             {
                 joint_des_states_.qdot(i) = 0.0;
                 for (int k = 0; k < J_pinv_.cols(); k++)
-                    joint_des_states_.qdot(i) += J_pinv_(i,k)*x_err_(k); //removed scaling factor of .7
+                    joint_des_states_.qdot(i) += alpha1 * J_pinv_(i,k)*x_err_(k); //removed scaling factor of .7
           
             }
+
+
 
             if (second_task)
             {
                 Eigen::Matrix<double, 7, 7> P;
                 P =  Eigen::Matrix<double, 7, 7>::Identity() - J_pinv_*J_.data;
                 KDL::Jacobian J_2;
+                J_2.resize(kdl_chain_.getNrOfJoints());
                 jnt_to_jac_solver_->JntToJac(joint_msr_states_.q,J_2,4);
+
+                // ROS_INFO_STREAM(J_2.data);
                 Eigen::Matrix<double, 7,1> q_null;
                 Eigen::MatrixXd J_pinv_2;
                 pseudo_inverse(J_2.data, J_pinv_2);
@@ -126,9 +134,9 @@ namespace myo_kuka
                 x_err_2.vel = x_2.p - x_des_2.p;
                 for (int i = 0; i < J_pinv_.rows(); i++)
                 {
-                    joint_des_states_.qdot(i) = 0.0;
+                    // joint_des_states_.qdot(i) = 0.0;
                     for (int k = 0; k < J_pinv_.cols(); k++)
-                        joint_des_states_.qdot(i) += NullSpace(i,k)*x_err_2(k); //removed scaling factor of .7
+                        joint_des_states_.qdot(i) += alpha2*NullSpace(i,k)*x_err_2(k); //removed scaling factor of .7
               
                 }
 

@@ -33,7 +33,7 @@ namespace myo_kuka
 		void command2(const geometry_msgs::Pose::ConstPtr &msg);
 
 	private:
-		ros::Subscriber sub_command_;
+		ros::Subscriber sub_command_, sub_command_2;
 		ros::Subscriber sub_gains_;
 
 		KDL::Frame x_;		//current pose
@@ -47,6 +47,7 @@ namespace myo_kuka
 
 		Eigen::MatrixXd J_pinv_;
 		Eigen::Matrix<double,3,3> skew_;
+		double alpha1, alpha2;
 
 		struct quaternion_
 		{
