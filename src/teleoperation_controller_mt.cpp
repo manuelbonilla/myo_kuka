@@ -108,7 +108,7 @@ namespace myo_kuka
             {
                 joint_des_states_.qdot(i) = 0.0;
                 for (int k = 0; k < J_pinv_.cols(); k++)
-                    joint_des_states_.qdot(i) += alpha1 * J_pinv_(i,k)*x_err_(k); //removed scaling factor of .7
+                    joint_des_states_.qdot(i) += alpha1 * J_pinv_(i,k)*x_err_(k); //removed scaling factor of .7 
           
             }
 
@@ -125,7 +125,11 @@ namespace myo_kuka
                 // ROS_INFO_STREAM(J_2.data);
                 Eigen::Matrix<double, 7,1> q_null;
                 Eigen::MatrixXd J_pinv_2;
-                pseudo_inverse(J_2.data, J_pinv_2);
+
+                Eigen::Matrix<double, 3, 7> J_2_short = Eigen::Matrix<double, 3, 7>::Zero();
+                J_2_short = J_2.data.block<3,7>(0,0);
+                pseudo_inverse(J_2_short, J_pinv_2);
+                ROS_INFO_STREAM(J_2_short);
                 Eigen::Matrix<double, 7, 6> NullSpace = Eigen::Matrix<double, 7, 6>::Zero();
                 NullSpace = P*J_pinv_2;
                 KDL::Twist x_err_2;
