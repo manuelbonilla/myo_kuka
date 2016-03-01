@@ -7,6 +7,8 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <Eigen/LU>
 
+#include <std_msgs/Float64MultiArray.h>
+
 #include <math.h>
 
 namespace myo_kuka
@@ -51,6 +53,8 @@ namespace myo_kuka
         sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
         //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
 
+        pub_error = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
+
         nh_.param<double>("alpha1", alpha1, 1);
         nh_.param<double>("alpha2", alpha2, 1);
         
@@ -67,6 +71,7 @@ namespace myo_kuka
     void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::Duration& period)
     {
 
+        std_msgs::Float64MultiArray error_msg;
         // get joint positions
         for(unsigned int i=0; i < joint_handles_.size(); i++)
         {
@@ -175,6 +180,12 @@ namespace myo_kuka
         {
             joint_handles_[i].setCommand(joint_des_states_.q(i));
         }
+
+        for(unsigned int i = 0; i < 6; ++i) {
+            error_msg.data.push_back(x_err_(i));
+        }
+
+        pub_error.publish(error_msg);
     }
 
     void TeleoperationControllerMTEffort::command(const geometry_msgs::Pose::ConstPtr &msg)

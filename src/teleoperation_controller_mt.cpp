@@ -9,6 +9,8 @@
 
 #include <math.h>
 
+#include <std_msgs/Float64MultiArray.h>
+
 namespace myo_kuka
 {
     TeleoperationControllerMT::TeleoperationControllerMT() {}
@@ -49,6 +51,8 @@ namespace myo_kuka
 
         sub_command_ = nh_.subscribe("command1", 1, &TeleoperationControllerMT::command, this);
         sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMT::command2, this);
+
+        pub_error = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
         //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMT::command2, this);
 
         nh_.param<double>("alpha1", alpha1, 1);
@@ -68,6 +72,8 @@ namespace myo_kuka
     {
 
         // get joint positions
+
+        std_msgs::Float64MultiArray error_msg;
         for(int i=0; i < joint_handles_.size(); i++)
         {
             joint_msr_states_.q(i) = joint_handles_[i].getPosition();
@@ -175,6 +181,14 @@ namespace myo_kuka
         {
             joint_handles_[i].setCommand(joint_des_states_.q(i));
         }
+
+        for(unsigned int i = 0; i < 6; ++i) {
+            error_msg.data.push_back(x_err_(i));
+        }
+
+        pub_error.publish(error_msg);
+        
+
     }
 
     void TeleoperationControllerMT::command(const geometry_msgs::Pose::ConstPtr &msg)
