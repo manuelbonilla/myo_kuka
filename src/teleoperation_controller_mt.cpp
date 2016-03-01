@@ -31,7 +31,7 @@ namespace myo_kuka
         J_.resize(kdl_chain_.getNrOfJoints());
 
         // get joint positions
-        for(int i=0; i < joint_handles_.size(); i++)
+        for(unsigned int i=0; i < joint_handles_.size(); i++)
         {
             joint_msr_states_.q(i) = joint_handles_[i].getPosition();
             joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
@@ -130,17 +130,18 @@ namespace myo_kuka
                 J_2_short = J_2.data.block<3,7>(0,0);
                 pseudo_inverse(J_2_short, J_pinv_2);
                 ROS_INFO_STREAM(J_2_short);
-                Eigen::Matrix<double, 7, 6> NullSpace = Eigen::Matrix<double, 7, 6>::Zero();
+                Eigen::Matrix<double, 7, 3> NullSpace = Eigen::Matrix<double, 7, 3>::Zero();
                 NullSpace = P*J_pinv_2;
                 KDL::Twist x_err_2;
                 KDL::Frame x_2;
                 fk_pos_solver_->JntToCart(joint_msr_states_.q,x_2, 4);
                 x_err_2.vel = x_2.p - x_des_2.p;
-                for (int i = 0; i < J_pinv_.rows(); i++)
+
+                for (int i = 0; i < J_pinv_2.rows(); i++)
                 {
                     // joint_des_states_.qdot(i) = 0.0;
-                    for (int k = 0; k < J_pinv_.cols(); k++)
-                        joint_des_states_.qdot(i) += alpha2*NullSpace(i,k)*x_err_2(k); //removed scaling factor of .7
+                    for (int k = 0; k < J_pinv_2.cols(); k++)
+                        joint_des_states_.qdot(i) += alpha2*NullSpace(i,k)*x_err_2.vel(k); //removed scaling factor of .7
               
                 }
 
