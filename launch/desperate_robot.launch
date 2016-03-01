@@ -33,7 +33,14 @@
 
     <!-- #### -->
 
-    <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro"/>
+    <group if="$(arg use_robot_sim)">
+        <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=false"/>
+    </group>
+    <group unless="$(arg use_robot_sim)">
+        <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+    </group>
+
+
 
 
     <group if="$(arg use_joint_state_publisher)">
@@ -136,7 +143,7 @@
         <!-- <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="true" output="screen" /> -->
     </group>
 
-    <rosparam command="load" file="$(find desperate_housewife)/config/hw_interface.yaml"/>
+    <rosparam command="load" file="$(find desperate_housewife)/config/hardware_interfaces.yaml"/>
 
     <!-- load all controller configurations to rosparam server -->
     <!-- <rosparam command="load" file="$(find desperate_housewife)/config/vito_controllers.yaml" /> -->
@@ -158,7 +165,9 @@
         </group>
 
         <!-- spawn only desired controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt teleoperation_controller_mt_effort"/>
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
+
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  teleoperation_controller_mt_effort"/>
 
     </group>
 
