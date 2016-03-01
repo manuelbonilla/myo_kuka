@@ -1,5 +1,5 @@
-#ifndef TELEOPERATION_CONTROLLERMT_H
-#define TELEOPERATION_CONTROLLERMT_H
+#ifndef TELEOPERATION_CONTROLLER_MT_EFFORT_H
+#define TELEOPERATION_CONTROLLER_MT_EFFORT_H
 
 
 #include <lwr_controllers/KinematicChainControllerBase.h>
@@ -20,13 +20,13 @@
 
 namespace myo_kuka
 {
-	class TeleoperationControllerMT: public controller_interface::KinematicChainControllerBase<hardware_interface::PositionJointInterface>
+	class TeleoperationControllerMTEffort: public controller_interface::KinematicChainControllerBase<hardware_interface::EffortJointInterface>
 	{
 	public:
-		TeleoperationControllerMT();
-		~TeleoperationControllerMT();
+		TeleoperationControllerMTEffort();
+		~TeleoperationControllerMTEffort();
 
-		bool init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n);
+		bool init(hardware_interface::EffortJointInterface *robot, ros::NodeHandle &n);
 		void starting(const ros::Time& time);
 		void update(const ros::Time& time, const ros::Duration& period);
 		void command(const geometry_msgs::Pose::ConstPtr &msg);

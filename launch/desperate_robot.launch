@@ -158,7 +158,7 @@
         </group>
 
         <!-- spawn only desired controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt teleoperation_controller_mt_effort"/>
 
     </group>
 

@@ -13,10 +13,18 @@
     </description>
   </class>
 
+  <class name="myo_kuka/TeleoperationControllerMTEffort" type="myo_kuka::TeleoperationControllerMTEffort" base_class_type="controller_interface::ControllerBase">
+    <description>
+      To add some comments about the controller
+    </description>
+  </class>
+
   <class name="myo_kuka/MultiTaskPriorityInverseKinematics" type="myo_kuka::MultiTaskPriorityInverseKinematics" base_class_type="controller_interface::ControllerBase">
     <description>
       To add some comments about the controller
     </description>
   </class>
+
+
 
   </library>
