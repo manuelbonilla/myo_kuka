@@ -18,6 +18,13 @@
 #include <boost/thread/condition.hpp>
 #include <sstream>
 
+#include <std_msgs/Bool.h>
+#include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_kdl.h>
+
+
 namespace myo_kuka
 {
 	class TeleoperationControllerMTEffort: public controller_interface::KinematicChainControllerBase<hardware_interface::EffortJointInterface>
@@ -31,6 +38,7 @@ namespace myo_kuka
 		void update(const ros::Time& time, const ros::Duration& period);
 		void command(const geometry_msgs::Pose::ConstPtr &msg);
 		void command2(const geometry_msgs::Pose::ConstPtr &msg);
+		void startControllerCallBack(const std_msgs::Bool::ConstPtr& msg);
 
 	private:
 		ros::Subscriber sub_command_, sub_command_2;
@@ -66,7 +74,9 @@ namespace myo_kuka
 		boost::scoped_ptr<KDL::ChainIkSolverVel_pinv> ik_vel_solver_;
 		boost::scoped_ptr<KDL::ChainIkSolverPos_NR_JL> ik_pos_solver_;
 
-		ros::Publisher pub_error;
+		ros::Publisher pub_error, pub_error2;
+		ros::Subscriber sub_start_controller;
+		tf::TransformBroadcaster tf_desired_hand_pose, elbow_reference;
 	};
 
 }

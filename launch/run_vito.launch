@@ -1,7 +1,7 @@
 <launch>
     <!-- LAUNCH INTERFACE -->
     <arg name="gui" default="false" />
-    <arg name="gazebo_gui" default="true" />
+    <arg name="gazebo_gui" default="false" />
     <arg name="robot_name" default="vito"/>
     <arg name="use_rviz" default="true"/>
     <arg name="use_joint_state_publisher" default="true"/>
@@ -26,10 +26,10 @@
     <!-- load the full robot in robot_description, useful for visualization, collision detection and planning simultaneously -->
     <!-- the selection is only due to the hand visualization which is different in real and simulation -->
     <group if="$(arg use_robot_sim)">
-        <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=false"/>
+        <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=false"/>
     </group>
     <group unless="$(arg use_robot_sim)">
-        <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+        <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
     </group>
 
     <group if="$(arg use_joint_state_publisher)">
@@ -44,7 +44,7 @@
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"  />
 
     <!-- load hardware interface and controller configurations -->
-    <rosparam command="load" file="$(find desperate_housewife)/config/vito_controllers.yaml"/>
+    <rosparam command="load" file="$(find myo_kuka)/config/vito_controllers.yaml"/>
     <rosparam command="load" file="$(find desperate_housewife)/config/hardware_interfaces.yaml"/>
 
 
@@ -144,9 +144,12 @@
         </group>
 
         <!-- load the controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
+  
+  
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller joint_trajectory_controller"/>
 
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  PotentialFieldControlKinematic PotentialFieldControl  PotentialFieldControlKinematicReverse PotentialFieldControlKinematicReverseEffort" output="screen"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  teleoperation_controller_mt teleoperation_controller_mt_effort"/>
+
 
     </group>
     
@@ -164,11 +167,11 @@
         </group>
 
         <!-- load the controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
+        <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/> -->
 
         <!-- grasp estimator -->
-        <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" />
-        <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="false" output="screen" />
+        <!-- <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" /> -->
+        <!-- <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="false" output="screen" /> -->
     </group>
 
     <group ns="right_arm">
@@ -190,9 +193,10 @@
         </group>
 
         <!-- load the controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
+  
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
 
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  PotentialFieldControlKinematic PotentialFieldControl  PotentialFieldControlKinematicReverse PotentialFieldControlKinematicReverseEffort" output="screen"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped joint_trajectory_controller  teleoperation_controller_mt_effort"/>
 
 
     </group>
@@ -211,16 +215,17 @@
         </group>
 
         <!-- load the controllers in current namespace -->
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
+        <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/> -->
 
         <!-- grasp estimator -->
-        <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" />
-        <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="true" output="screen" />
+        <!-- <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" /> -->
+        <!-- <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="true" output="screen" /> -->
     </group>
 
 
     <group if="$(arg use_rviz)">
-        <node name="desperate_rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find desperate_housewife)/launch/rviz_config.rviz" output="screen"/>
+        <node name="myo_rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find myo_kuka)/launch/rviz_config.rviz" output="screen"/>
     </group>
+
 
 </launch>

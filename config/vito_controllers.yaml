@@ -16,8 +16,27 @@ left_arm:
 
   one_task_inverse_dynamics_jl:
     type: lwr_controllers/OneTaskInverseDynamicsJL
-    root_name: vito_anchor
+    root_name: world
     tip_name: left_hand_palm_ref_link
+
+  teleoperation_controller:
+    type: myo_kuka/TeleoperationController
+    root_name: world
+    tip_name: left_hand_palm_ref_link
+
+  teleoperation_controller_mt:
+    type: myo_kuka/TeleoperationControllerMT
+    root_name: world
+    tip_name: left_hand_palm_ref_link
+    alpha1: 0.7
+    alpha2: 50
+
+  teleoperation_controller_mt_effort:
+    type: myo_kuka/TeleoperationControllerMTEffort
+    root_name: world
+    tip_name: left_hand_palm_ref_link
+    alpha1: 0.7
+    alpha2: 0.1
 
 right_arm:
   # CONTROLLERS USED IN THE EXAMLE
@@ -38,31 +57,31 @@ right_arm:
       
   one_task_inverse_dynamics_jl:
     type: lwr_controllers/OneTaskInverseDynamicsJL
-    root_name: vito_anchor
+    root_name: world
     tip_name: right_hand_palm_ref_link
 
   teleoperation_controller:
     type: myo_kuka/TeleoperationController
-    root_name: vito_anchor
+    root_name: world
     tip_name: right_hand_palm_ref_link
 
   teleoperation_controller_mt:
     type: myo_kuka/TeleoperationControllerMT
-    root_name: vito_anchor
+    root_name: world
     tip_name: right_hand_palm_ref_link
-    alpha1: 1
-    alpha2: 0.3
+    alpha1: 1.0
+    alpha2: 0.5
 
   teleoperation_controller_mt_effort:
     type: myo_kuka/TeleoperationControllerMTEffort
-    root_name: vito_anchor
+    root_name: world
     tip_name: right_hand_palm_ref_link
-    alpha1: 1
-    alpha2: 0.3
+    alpha1: 1.0
+    alpha2: 0.5
 
   multi_task_inverse_priority_kinematics:
     type: myo_kuka/MultiTaskPriorityInverseKinematics
-    root_name: vito_anchor
+    root_name: world
     tip_name: right_hand_palm_ref_link
     pid_right_arm_a1_joint: {p: 250,  i: 10, d: 30, i_clamp_min: -0.3, i_clamp_max: 0.3}
     pid_right_arm_a2_joint: {p: 220,  i: 10, d: 30, i_clamp_min: -0.3, i_clamp_max: 0.3}
@@ -72,3 +91,18 @@ right_arm:
     pid_right_arm_a5_joint: {p: 40,  i: 5, d: 7, i_clamp_min: -0.3, i_clamp_max: 0.3}
     pid_right_arm_a6_joint: {p: 15,  i: 2, d: 5, i_clamp_min: -0.3, i_clamp_max: 0.3}
     #right_arm/multi_task_inverse_priority_kinematics/pid_right_arm_a1_joint
+head:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 100  
+  joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - head_neck_pitch_joint
+      - head_neck_roll_joint
+      - head_neck_yaw_joint
+      - head_head_tilt_joint
+      - head_eyes_tilt_joint
+      - head_left_eye_joint
+      - head_right_eye_joint
+
