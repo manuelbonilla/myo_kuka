@@ -8,10 +8,11 @@ Start Matlab
 
   - rostopic pub - /right_arm/teleoperation_controller_mt/start_controller std_msgs/Bool True
 
-To star demo in simulation
+To star demo in real
 
   - roslaunch myo_kuka run_vito.launch use_robot_sim:=false right_arm_enabled:=true
-    - rosservice call /right_arm/controller_manager/switch_controller "{start_controllers: ['teleoperation_controller_mt_effort'], stop_controllers: ['teleoperation_controller_mt'], strictness: 2}"
+  
+  - rosservice call /right_arm/controller_manager/switch_controller "{start_controllers: ['teleoperation_controller_mt_effort'], stop_controllers: ['teleoperation_controller_mt'], strictness: 2}"
 
 Start Matlab
 
