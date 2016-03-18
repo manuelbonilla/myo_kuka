@@ -29,7 +29,7 @@ orientation:
   x: 0.0
   y: 0.0
   z: 0.0
-  w: 0.0" 
+  w: 1.0" 
 
   - rostopic pub  -1 /right_arm/teleoperation_controller_mt/command2 geometry_msgs/Pose "position:
   x: -0.3
@@ -39,6 +39,49 @@ orientation:
   x: 0.0
   y: 0.0
   z: 0.0
-  w: 0.0" 
+  w: 1.0" 
 
 
+rostopic pub -1 /right_arm/PotentialFieldControlKinematicReverseEffort/command1 geometry_msgs/Pose "position:
+  x: -1.0
+  y: 0.3
+  z: 0.4
+orientation:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  w: 1.0" 
+
+
+rostopic pub -1 /right_arm/teleoperation_controller_mt/command1 geometry_msgs/Pose "position:
+  x: -1.0
+  y: 0.7
+  z: 0.4
+orientation:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  w: 1.0" 
+
+rostopic pub -1 /right_arm/teleoperation_controller_mt/command1 geometry_msgs/Pose "position: 
+  x: -1.11327444383
+  y: 0.620524509281
+  z: 0.313643190143
+orientation: 
+  x: 0.846108589321
+  y: -0.518919237685
+  z: 0.109458348647
+  w: 0.0516269603588"
+
+
+
+
+rostopic pub -1 /right_arm/teleoperation_controller_mt/command1 geometry_msgs/Pose "position: 
+  x: -1.10561303429
+  y: 0.554480780125
+  z: 0.253100522673
+orientation: 
+  x: 0.870209789324
+  y: -0.480683158342
+  z: 0.0534159975856
+  w: -0.0931249928393"

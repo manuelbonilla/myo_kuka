@@ -167,11 +167,11 @@
         </group>
 
         <!-- load the controllers in current namespace -->
-        <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/> -->
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
 
         <!-- grasp estimator -->
-        <!-- <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" /> -->
-        <!-- <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="false" output="screen" /> -->
+        <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" />
+        <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="false" output="screen" />
     </group>
 
     <group ns="right_arm">
@@ -196,7 +196,7 @@
   
         <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
 
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped joint_trajectory_controller  teleoperation_controller_mt_effort"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped joint_trajectory_controller  teleoperation_controller_mt_effort PotentialFieldControlKinematicReverseEffort"/>
 
 
     </group>

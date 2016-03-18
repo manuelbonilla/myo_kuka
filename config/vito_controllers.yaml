@@ -91,6 +91,32 @@ right_arm:
     pid_right_arm_a5_joint: {p: 40,  i: 5, d: 7, i_clamp_min: -0.3, i_clamp_max: 0.3}
     pid_right_arm_a6_joint: {p: 15,  i: 2, d: 5, i_clamp_min: -0.3, i_clamp_max: 0.3}
     #right_arm/multi_task_inverse_priority_kinematics/pid_right_arm_a1_joint
+
+  PotentialFieldControlKinematicReverseEffort:
+    type: myo_kuka/PotentialFieldControlKinematicReverseEffort
+    root_name: world
+    tip_name: right_hand_palm_ref_link
+    topic_desired_reference: command1
+    topic_obstacle: obstacles
+    time_interpolation: 2.0
+    max_vel_percentage: 0.70
+    pf_repulsive_gain_obstacles: 0.001
+    pf_repulsive_gain_table: 0.001
+    pf_dist_to_obstacles: 0.20
+    pf_dist_to_table: 0.15
+    vel_limit_robot: 1.0
+    k_p: [2.5, 2.5, 2.5, 2.5, 2.5, 2.5]
+    k_d: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15]
+    k_i: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    links_with_potential_field:  ['left_arm_4_link', 'left_arm_5_link', 'left_arm_6_link', 'left_arm_7_link', 'left_hand_palm_ref_link']
+    # links_with_potential_field:  ['left_arm_6_link', 'left_arm_7_link', 'left_hand_palm_ref_link']
+    enable_joint_limits_avoidance: false
+    enable_obstacle_avoidance: false
+    enable_attractive_field: true
+    enable_null_space: true
+    gain_null_space: 0.2
+    enable_interpolation:: false
+
 head:
   joint_state_controller:
     type: joint_state_controller/JointStateController
@@ -106,3 +132,11 @@ head:
       - head_left_eye_joint
       - head_right_eye_joint
 
+left_hand:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 100  
+  joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - left_hand_synergy_joint

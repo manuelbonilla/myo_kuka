@@ -73,6 +73,7 @@ namespace myo_kuka
 		boost::scoped_ptr<KDL::ChainFkSolverPos_recursive> fk_pos_solver_;
 		boost::scoped_ptr<KDL::ChainIkSolverVel_pinv> ik_vel_solver_;
 		boost::scoped_ptr<KDL::ChainIkSolverPos_NR_JL> ik_pos_solver_;
+		boost::scoped_ptr<KDL::ChainDynParam> id_solver_;
 
 		ros::Publisher pub_error, pub_error2;
 		ros::Subscriber sub_start_controller;

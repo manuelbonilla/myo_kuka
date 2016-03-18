@@ -2,6 +2,7 @@
 #include <teleoperation_controller_mt_effort.h>
 #include <utils/pseudo_inversion.h>
 #include <utils/skew_symmetric.h>
+#include "utils/kuka_lwr_utilities.h"
 
 #include <pluginlib/class_list_macros.h>
 #include <kdl_parser/kdl_parser.hpp>
@@ -79,10 +80,9 @@ void TeleoperationControllerMTEffort::starting(const ros::Time& time)
 
 void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::Duration& period)
 {
-
-    nh_.param<double>("alpha1", alpha1, 1.0);
+   nh_.param<double>("alpha1", alpha1, 1.0);
     nh_.param<double>("alpha2", alpha2, 1.0);
-    ROS_INFO_STREAM("Gains alpha1: " << alpha1 << "\t alpha2: " << alpha2);
+    // ROS_INFO_STREAM("Gains alpha1: " << alpha1 << "\t alpha2: " << alpha2);
 
 
     std_msgs::Float64MultiArray error_msg;
@@ -105,10 +105,10 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
         fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
 
         // end-effector position error
-        x_err_.vel = x_des_.p - x_.p;
 
-        // getting quaternion from rotation matrix
+        x_err_.vel = x_des_.p - x_.p;
         x_.M.GetQuaternion(quat_curr_.v(0), quat_curr_.v(1), quat_curr_.v(2), quat_curr_.a);
+
         x_des_.M.GetQuaternion(quat_des_.v(0), quat_des_.v(1), quat_des_.v(2), quat_des_.a);
 
         skew_symmetric(quat_des_.v, skew_);
@@ -124,13 +124,63 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
         x_err_.rot = quat_curr_.a * quat_des_.v - quat_des_.a * quat_curr_.v - v_temp_;
 
         // computing q_dot
+
+
+        /***************************************************/
+        Eigen::MatrixXd epsilon_hat = skew_symmetric(quat_des_.v);
+        Eigen::MatrixXd orientation_error = Eigen::MatrixXd::Zero(3, 1);
+        double eta_d = quat_des_.a;
+        double eta = quat_curr_.a;
+        Eigen::MatrixXd actual_quaternion = Eigen::MatrixXd::Zero(3, 1);
+        Eigen::MatrixXd desired_quaternion = Eigen::MatrixXd::Zero(3, 1);
+
+        actual_quaternion << quat_curr_.v(0), quat_curr_.v(1), quat_curr_.v(2);
+        desired_quaternion << quat_des_.v(0), quat_des_.v(1), quat_des_.v(2);
+
+        orientation_error = eta_d * actual_quaternion - eta * desired_quaternion + epsilon_hat * actual_quaternion;
+
+        KDL::Twist xerr;
+        xerr.vel = x_des_.p - x_.p;
+        xerr.rot = 0.5 * (  x_.M.UnitX() * x_des_.M.UnitX() +
+                            x_.M.UnitY() * x_des_.M.UnitY() +
+                            x_.M.UnitZ() * x_des_.M.UnitZ());
+
+
+        Eigen::MatrixXd qp_des_attractive = Eigen::MatrixXd::Zero(7, 1);
+        Eigen::MatrixXd x_err_temp_eigen = Eigen::MatrixXd::Zero(6, 1);
+        x_err_temp_eigen << x_err_.vel.data[0],  x_err_.vel.data[1],  x_err_.vel.data[2],
+                         orientation_error(0), orientation_error(1), orientation_error(2);
+        qp_des_attractive = alpha1 * J_pinv_ * x_err_temp_eigen;
+
+
+        // computing q_dot
+        // for (int i = 0; i < J_pinv_.rows(); i++)
+        // {
+        //     joint_des_states_.qdot(i) = qp_des_attractive(i); //removed scaling factor of .7
+
+        // }
+
+        // ROS_INFO_STREAM("Error orientation quat: " << orientation_error.transpose());
+        KDL::Twist x_err_temp;
+        x_err_temp =  diff(x_, x_des_);
+        // ROS_INFO_STREAM("Error orientation diff: "  << x_err_temp.rot.data[0] << " "
+        //                 << x_err_temp.rot.data[1] << " "
+        //                 << x_err_temp.rot.data[2]);
+        // ROS_INFO_STREAM("Error orientation vectorts: "  << xerr.rot.data[0] << " "
+        //                 << xerr.rot.data[1] << " "
+        //                 << xerr.rot.data[2]);
+
+        /****************************************/
+
+        x_err_.rot = x_err_temp.rot;
         for (int i = 0; i < J_pinv_.rows(); i++)
         {
             joint_des_states_.qdot(i) = 0.0;
             for (int k = 0; k < J_pinv_.cols(); k++)
                 joint_des_states_.qdot(i) += alpha1 * J_pinv_(i, k) * x_err_(k); //removed scaling factor of .7
-
         }
+
+
 
         KDL::Frame x_2;
         fk_pos_solver_->JntToCart(joint_msr_states_.q, x_2, 6);
@@ -147,15 +197,12 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
             Eigen::Matrix<double, 7, 7> P;
             P =  Eigen::Matrix<double, 7, 7>::Identity() - J_pinv_ * J_.data;
 
-
-            // ROS_INFO_STREAM(J_2.data);
             Eigen::Matrix<double, 7, 1> q_null;
             Eigen::MatrixXd J_pinv_2;
 
             Eigen::Matrix<double, 3, 7> J_2_short = Eigen::Matrix<double, 3, 7>::Zero();
             J_2_short = J_2.data.block<3, 7>(0, 0);
             pseudo_inverse(J_2_short, J_pinv_2);
-            // ROS_INFO_STREAM(J_2_short);
             Eigen::Matrix<double, 7, 3> NullSpace = Eigen::Matrix<double, 7, 3>::Zero();
             NullSpace = P * J_pinv_2;
 
@@ -167,34 +214,55 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
 
             q_null = alpha2 * NullSpace * x_err_2_eigen; //removed scaling factor of .7
 
-            // ROS_INFO_STREAM("q_null: " << q_null.transpose());
+            // Eigen::Matrix<double, 7, 7> P;
+            // P =  Eigen::Matrix<double, 7, 7>::Identity() - J_pinv_ * J_.data;
 
-            
+            // Eigen::Matrix<double, 7, 1> q_null;
+            // Eigen::MatrixXd J_pinv_2;
+
+            // Eigen::Matrix<double, 6, 7> J_2_short = Eigen::Matrix<double, 6, 7>::Zero();
+            // J_2_short = J_2.data.block<6, 7>(0, 0);
+            // pseudo_inverse(J_2_short, J_pinv_2);
+            // Eigen::Matrix<double, 7, 6> NullSpace = Eigen::Matrix<double, 7, 6>::Zero();
+            // NullSpace = P * J_pinv_2;
+
+
+            // // x_err_2.vel = x_des_2.p - x_2.p;
+
+            // x_err_2 = diff(x_2, x_des_2);
+
+            // Eigen::MatrixXd x_err_2_eigen = Eigen::MatrixXd::Zero(6, 1);
+            // x_err_2_eigen << x_err_2.vel(0), x_err_2.vel(1), x_err_2.vel(2), x_err_2.rot(0), x_err_2.rot(1), x_err_2.rot(2);
+
+            // q_null = alpha2 * NullSpace * x_err_2_eigen; //removed scaling factor of .7
+
 
             for (int i = 0; i < J_pinv_2.rows(); i++)
             {
- 
-                    joint_des_states_.qdot(i) += alpha2 * q_null[i]; //removed scaling factor of .7
+
+                joint_des_states_.qdot(i) += alpha2 * q_null[i]; //removed scaling factor of .7
 
             }
 
 
+
         }
 
-
+        saturateJointVelocities(joint_des_states_.qdot);
 
         // integrating q_dot -> getting q (Euler method)
         for (int i = 0; i < joint_handles_.size(); i++)
             joint_des_states_.q(i) += period.toSec() * joint_des_states_.qdot(i);
 
+        saturateJointPositions(joint_des_states_.q);
         // joint limits saturation
-        for (int i = 0;  i < joint_handles_.size(); i++)
-        {
-            if (joint_des_states_.q(i) < joint_limits_.min(i))
-                joint_des_states_.q(i) = joint_limits_.min(i);
-            if (joint_des_states_.q(i) > joint_limits_.max(i))
-                joint_des_states_.q(i) = joint_limits_.max(i);
-        }
+        // for (int i = 0;  i < joint_handles_.size(); i++)
+        // {
+        //     if (joint_des_states_.q(i) < joint_limits_.min(i))
+        //         joint_des_states_.q(i) = joint_limits_.min(i);
+        //     if (joint_des_states_.q(i) > joint_limits_.max(i))
+        //         joint_des_states_.q(i) = joint_limits_.max(i);
+        // }
 
         // if (Equal(x_, x_des_, 0.005))
         // {
