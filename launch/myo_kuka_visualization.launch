@@ -21,4 +21,5 @@
 
   <node name="myo_rviz" pkg="rviz" type="rviz" respawn="false" args="-d $(find myo_kuka)/launch/rviz_config.rviz" output="screen"/>
 
+
 </launch>
