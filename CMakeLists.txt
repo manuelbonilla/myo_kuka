@@ -87,6 +87,10 @@ add_library(${PROJECT_NAME} src/teleoperation_controller.cpp src/teleoperation_c
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencpp)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} kdl_parser ${orocos_kdl_LIBRARIES})
 
+add_executable(hand_republisher src/hand_republisher.cpp)
+add_dependencies(hand_republisher hand_republisher_gencpp ${PROJECT_NAME})
+target_link_libraries(hand_republisher ${PROJECT_NAME} ${catkin_LIBRARIES})
+
 
 
 install(DIRECTORY include/${PROJECT_NAME}/

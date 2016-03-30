@@ -1,0 +1,19 @@
+<launch>
+  <group ns="right_hand">
+    <param name="from_topic" value="hand_remap/hand_position"/>
+    <param name="on_topic" value="joint_trajectory_controller/command"/>
+    <param name="synergy_joint" value="right_hand_synergy_joint"/>
+    <node name="hand_remap" pkg="myo_kuka" type="hand_republisher" output="screen" >
+    </node>
+  </group>
+
+
+<!--   <group ns="left_hand">
+    <param name="from_topic" value="hand_remap/hand_position"/>
+    <param name="on_topic" value="joint_trajectory_controller/command"/>
+    <param name="synergy_joint" value="left_hand_synergy_joint"/>
+    <node name="hand_remap" pkg="myo_kuka" type="hand_republisher" output="screen" >
+    </node>
+  </group> -->
+
+</launch>

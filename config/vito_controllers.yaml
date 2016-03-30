@@ -28,15 +28,15 @@ left_arm:
     type: myo_kuka/TeleoperationControllerMT
     root_name: world
     tip_name: left_hand_palm_ref_link
-    alpha1: 0.7
-    alpha2: 50
+    alpha1: 1.0
+    alpha2: 0.5
 
   teleoperation_controller_mt_effort:
     type: myo_kuka/TeleoperationControllerMTEffort
     root_name: world
     tip_name: left_hand_palm_ref_link
-    alpha1: 0.7
-    alpha2: 0.1
+    alpha1: 1.0
+    alpha2: 0.5
 
 right_arm:
   # CONTROLLERS USED IN THE EXAMLE
@@ -140,3 +140,13 @@ left_hand:
     type: position_controllers/JointTrajectoryController
     joints: 
       - left_hand_synergy_joint
+
+right_hand:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 100  
+  joint_trajectory_controller:
+    type: position_controllers/JointTrajectoryController
+    joints: 
+      - right_hand_synergy_joint
+
