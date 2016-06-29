@@ -1,5 +1,5 @@
 
-#include <teleoperation_controller.h>
+#include <teleoperation_controllers/slave_test_controller.h>
 #include <utils/pseudo_inversion.h>
 #include <utils/skew_symmetric.h>
 
@@ -9,16 +9,16 @@
 
 #include <math.h>
 
-namespace myo_kuka
+namespace teleoperation_controllers 
 {
-    TeleoperationController::TeleoperationController() {}
-    TeleoperationController::~TeleoperationController() {}
+    slave_test_controller::slave_test_controller() {}
+    slave_test_controller::~slave_test_controller() {}
 
-    bool TeleoperationController::init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n)
+    bool slave_test_controller::init(hardware_interface::PositionJointInterface *robot, ros::NodeHandle &n)
     {
         if( !(KinematicChainControllerBase<hardware_interface::PositionJointInterface>::init(robot, n)) )
         {
-            ROS_ERROR("Couldn't initilize OneTaskInverseKinematics controller.");
+            ROS_ERROR("Couldn't initilize slave_test_controller controller.");
             return false;
         }
 
@@ -40,27 +40,23 @@ namespace myo_kuka
 
         // computing forward kinematics
         fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
-        fk_pos_solver_->JntToCart(joint_msr_states_.q, x_des_);
 
         //Desired posture is the current one
         x_des_ = x_;
 
         cmd_flag_ = 0;
 
-        sub_command_ = nh_.subscribe("command", 1, &TeleoperationController::command, this);
-        //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationController::command2, this);
-        
-
+        sub_command_ = nh_.subscribe("command", 1, &slave_test_controller::command, this);
 
         return true;
     }
 
-    void TeleoperationController::starting(const ros::Time& time)
+    void slave_test_controller::starting(const ros::Time& time)
     {
 
     }
 
-    void TeleoperationController::update(const ros::Time& time, const ros::Duration& period)
+    void slave_test_controller::update(const ros::Time& time, const ros::Duration& period)
     {
 
         // get joint positions
@@ -135,41 +131,44 @@ namespace myo_kuka
         }
     }
 
-    void TeleoperationController::command(const geometry_msgs::Pose::ConstPtr &msg)
+    void slave_test_controller::command(const lwr_controllers::PoseRPY::ConstPtr &msg)
     {
         KDL::Frame frame_des_;
 
-
+        switch(msg->id)
+        {
+            case 0:
             frame_des_ = KDL::Frame(
-                    KDL::Rotation::Quaternion(msg->orientation.x,
-                                      msg->orientation.y,
-                                      msg->orientation.z,
-                                      msg->orientation.w),
+                    KDL::Rotation::RPY(msg->orientation.roll,
+                                      msg->orientation.pitch,
+                                      msg->orientation.yaw),
                     KDL::Vector(msg->position.x,
                                 msg->position.y,
                                 msg->position.z));
+            break;
+
+            case 1: // position only
+            frame_des_ = KDL::Frame(
+                KDL::Vector(msg->position.x,
+                            msg->position.y,
+                            msg->position.z));
+            break;
+
+            case 2: // orientation only
+            frame_des_ = KDL::Frame(
+                KDL::Rotation::RPY(msg->orientation.roll,
+                                   msg->orientation.pitch,
+                                   msg->orientation.yaw));
+            break;
+
+            default:
+            ROS_INFO("Wrong message ID");
+            return;
+        }
 
         x_des_ = frame_des_;
         cmd_flag_ = 1;
     }
-
- /*       void TeleoperationController::command2(const geometry_msgs::Pose::ConstPtr &msg)
-    {
-        KDL::Frame frame_des_2;
-
-
-            frame_des_2 = KDL::Frame(
-                    KDL::Rotation::Quaternion(msg->orientation.x,
-                                      msg->orientation.y,
-                                      msg->orientation.z,
-                                      msg->orientation.w),
-                    KDL::Vector(msg->position.x,
-                                msg->position.y,
-                                msg->position.z));
-
-        x_des_2 = frame_des_2;
-        cmd_flag_ = 1;
-    }*/
 }
 
-PLUGINLIB_EXPORT_CLASS(myo_kuka::TeleoperationController, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(teleoperation_controllers::slave_test_controller, controller_interface::ControllerBase)

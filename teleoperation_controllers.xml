@@ -1,0 +1,26 @@
+
+<library path="lib/libteleoperation_controllers">
+
+  <class name="teleoperation_controllers/TeleoperationController" type="teleoperation_controllers::TeleoperationController" base_class_type="controller_interface::ControllerBase">
+    <description>
+      To add some comments about the controller
+    </description>
+  </class>
+
+  <class name="teleoperation_controllers/slave_test_controller" type="teleoperation_controllers::slave_test_controller" base_class_type="controller_interface::ControllerBase">
+    <description>
+      To add some comments about the controller
+    </description>
+  </class>
+
+
+
+  <class name="teleoperation_controllers/test_control" type="teleoperation_controllers::test_control" base_class_type="controller_interface::ControllerBase">
+    <description>
+      To add some comments about the controller
+    </description>
+  </class>
+
+
+
+  </library>
