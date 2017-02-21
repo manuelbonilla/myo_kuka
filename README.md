@@ -16,7 +16,7 @@ To star demo in real
 
 Start Matlab
 
-  - rostopic pub - /right_arm/teleoperation_controller_mt_effort/start_controller std_msgs/Bool True
+  - rostopic pub -1 /right_arm/teleoperation_controller_mt_effort/start_controller std_msgs/Bool True
 
 
 To test the controller publish a reference in topics command1 or command2. For example

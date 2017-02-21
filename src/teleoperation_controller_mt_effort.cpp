@@ -12,6 +12,7 @@
 
 #include <std_msgs/Float64MultiArray.h>
 #include <tf_conversions/tf_kdl.h>
+#include <kdl/frames_io.hpp>
 
 namespace myo_kuka
 {
@@ -34,12 +35,21 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
     q_cmd_.resize(kdl_chain_.getNrOfJoints());
     J_.resize(kdl_chain_.getNrOfJoints());
 
+
+    K_.resize(kdl_chain_.getNrOfJoints());
+    D_.resize(kdl_chain_.getNrOfJoints());
+    tau_des_.resize(kdl_chain_.getNrOfJoints());
+
+
     // get joint positions
     for (unsigned int i = 0; i < joint_handles_.size(); i++)
     {
         joint_msr_states_.q(i) = joint_handles_[i].getPosition();
         joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
         joint_des_states_.q(i) = joint_msr_states_.q(i);
+        tau_des_(i) = 0.0;
+        K_(i) = joint_stiffness_handles_[i].getPosition();
+        D_(i) = joint_damping_handles_[i].getPosition();
     }
 
     // computing forward kinematics
@@ -53,21 +63,20 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
 
     sub_command_ = nh_.subscribe("command1", 1, &TeleoperationControllerMTEffort::command, this);
     sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
+    sub_start_controller = nh_.subscribe("start_controller", 1, &TeleoperationControllerMTEffort::startControllerCallBack, this);
 
     pub_error = nh_.advertise<std_msgs::Float64MultiArray>("error", 1000);
     pub_error2 = nh_.advertise<std_msgs::Float64MultiArray>("error2", 1000);
+
     //sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
 
-    sub_start_controller = nh_.subscribe("start_controller", 1, &TeleoperationControllerMTEffort::startControllerCallBack, this);
+    stiffness_topic = nh_.subscribe("stiffness_scale", 1, &TeleoperationControllerMTEffort::StiffnessControllerCallBack, this);
+
     nh_.param<double>("alpha1", alpha1, 1);
     nh_.param<double>("alpha2", alpha2, 1);
+    nh_.param<double>("stiffness_max", stiffness_max_, 1000);
 
     ROS_INFO_STREAM("alpha2: " << alpha2);
-
-    // for (unsigned i = 0; i < kdl_chain_.getNrOfSegments(); ++i)
-    // {
-    //     ROS_INFO_STREAM("Segment name: " << kdl_chain_.getSegment(i).getName() << " Number " << i);
-    // }
 
     second_task = false;
     return true;
@@ -75,12 +84,25 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
 
 void TeleoperationControllerMTEffort::starting(const ros::Time& time)
 {
+for (unsigned int i = 0; i < joint_handles_.size(); i++)
+    {
+        K_(i) = stiffness_max_;
+    }
+}
+
+void TeleoperationControllerMTEffort::StiffnessControllerCallBack(const std_msgs::Float64::ConstPtr &msg)
+{
+
+    for (unsigned int i = 0; i < joint_handles_.size(); i++)
+    {
+        K_(i) = msg->data*stiffness_max_;
+    }
 
 }
 
 void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::Duration& period)
 {
-   nh_.param<double>("alpha1", alpha1, 1.0);
+    nh_.param<double>("alpha1", alpha1, 1.0);
     nh_.param<double>("alpha2", alpha2, 1.0);
     // ROS_INFO_STREAM("Gains alpha1: " << alpha1 << "\t alpha2: " << alpha2);
 
@@ -88,13 +110,14 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
     std_msgs::Float64MultiArray error_msg;
     std_msgs::Float64MultiArray error_msg2;
     KDL::Twist x_err_2;
-    for (int i = 0; i < joint_handles_.size(); i++)
+    for (unsigned int i = 0; i < joint_handles_.size(); i++)
     {
         joint_msr_states_.q(i) = joint_handles_[i].getPosition();
     }
 
     if (cmd_flag_)
     {
+        // ROS_INFO_STREAM("In loop");
         // computing Jacobian
         jnt_to_jac_solver_->JntToJac(joint_msr_states_.q, J_);
 
@@ -120,13 +143,8 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
                 v_temp_(i) += skew_(i, k) * (quat_curr_.v(k));
         }
 
-        // end-effector orientation error
         x_err_.rot = quat_curr_.a * quat_des_.v - quat_des_.a * quat_curr_.v - v_temp_;
 
-        // computing q_dot
-
-
-        /***************************************************/
         Eigen::MatrixXd epsilon_hat = skew_symmetric(quat_des_.v);
         Eigen::MatrixXd orientation_error = Eigen::MatrixXd::Zero(3, 1);
         double eta_d = quat_des_.a;
@@ -152,25 +170,9 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
                          orientation_error(0), orientation_error(1), orientation_error(2);
         qp_des_attractive = alpha1 * J_pinv_ * x_err_temp_eigen;
 
-
-        // computing q_dot
-        // for (int i = 0; i < J_pinv_.rows(); i++)
-        // {
-        //     joint_des_states_.qdot(i) = qp_des_attractive(i); //removed scaling factor of .7
-
-        // }
-
-        // ROS_INFO_STREAM("Error orientation quat: " << orientation_error.transpose());
         KDL::Twist x_err_temp;
         x_err_temp =  diff(x_, x_des_);
-        // ROS_INFO_STREAM("Error orientation diff: "  << x_err_temp.rot.data[0] << " "
-        //                 << x_err_temp.rot.data[1] << " "
-        //                 << x_err_temp.rot.data[2]);
-        // ROS_INFO_STREAM("Error orientation vectorts: "  << xerr.rot.data[0] << " "
-        //                 << xerr.rot.data[1] << " "
-        //                 << xerr.rot.data[2]);
 
-        /****************************************/
 
         x_err_.rot = x_err_temp.rot;
         for (int i = 0; i < J_pinv_.rows(); i++)
@@ -214,68 +216,43 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
 
             q_null = alpha2 * NullSpace * x_err_2_eigen; //removed scaling factor of .7
 
-            // Eigen::Matrix<double, 7, 7> P;
-            // P =  Eigen::Matrix<double, 7, 7>::Identity() - J_pinv_ * J_.data;
-
-            // Eigen::Matrix<double, 7, 1> q_null;
-            // Eigen::MatrixXd J_pinv_2;
-
-            // Eigen::Matrix<double, 6, 7> J_2_short = Eigen::Matrix<double, 6, 7>::Zero();
-            // J_2_short = J_2.data.block<6, 7>(0, 0);
-            // pseudo_inverse(J_2_short, J_pinv_2);
-            // Eigen::Matrix<double, 7, 6> NullSpace = Eigen::Matrix<double, 7, 6>::Zero();
-            // NullSpace = P * J_pinv_2;
-
-
-            // // x_err_2.vel = x_des_2.p - x_2.p;
-
-            // x_err_2 = diff(x_2, x_des_2);
-
-            // Eigen::MatrixXd x_err_2_eigen = Eigen::MatrixXd::Zero(6, 1);
-            // x_err_2_eigen << x_err_2.vel(0), x_err_2.vel(1), x_err_2.vel(2), x_err_2.rot(0), x_err_2.rot(1), x_err_2.rot(2);
-
-            // q_null = alpha2 * NullSpace * x_err_2_eigen; //removed scaling factor of .7
-
-
-            for (int i = 0; i < J_pinv_2.rows(); i++)
+                for (int i = 0; i < J_pinv_2.rows(); i++)
             {
 
                 joint_des_states_.qdot(i) += alpha2 * q_null[i]; //removed scaling factor of .7
 
             }
-
-
+            
 
         }
 
+        // ROS_INFO_STREAM("In loop");
+        // 
         saturateJointVelocities(joint_des_states_.qdot);
 
-        // integrating q_dot -> getting q (Euler method)
-        for (int i = 0; i < joint_handles_.size(); i++)
+         for (unsigned  int i = 0; i < joint_handles_.size(); i++)
             joint_des_states_.q(i) += period.toSec() * joint_des_states_.qdot(i);
 
         saturateJointPositions(joint_des_states_.q);
-        // joint limits saturation
-        // for (int i = 0;  i < joint_handles_.size(); i++)
-        // {
-        //     if (joint_des_states_.q(i) < joint_limits_.min(i))
-        //         joint_des_states_.q(i) = joint_limits_.min(i);
-        //     if (joint_des_states_.q(i) > joint_limits_.max(i))
-        //         joint_des_states_.q(i) = joint_limits_.max(i);
-        // }
 
-        // if (Equal(x_, x_des_, 0.005))
-        // {
-        //     ROS_INFO("On target");
-        //     cmd_flag_ = 0;
-        // }
     }
 
     // set controls for joints
-    for (int i = 0; i < joint_handles_.size(); i++)
+    // std::cout << "njh: " << joint_handles_.size();
+    // std::cout << "\tnjs: " << joint_set_point_handles_.size();
+    // std::cout << "\tnjd: " << joint_stiffness_handles_.size();
+    // std::cout << "\tnja: " << joint_damping_handles_.size() << std::endl;
+    // std::cout << "q: " ;
+    for (unsigned int i = 0; i < joint_handles_.size(); i++)
     {
-        joint_handles_[i].setCommand(joint_des_states_.q(i));
+        joint_handles_[i].setCommand(0.0);
+        joint_set_point_handles_[i].setCommand(joint_des_states_.q(i));
+        joint_stiffness_handles_[i].setCommand(K_(i));
+        joint_damping_handles_[i].setCommand(D_(i));
+        // std::cout << joint_des_states_.q(i) << ", " ;
     }
+    // std::cout << std::endl;
+
 
     for (unsigned int i = 0; i < 6; ++i) {
         error_msg.data.push_back(x_err_(i));

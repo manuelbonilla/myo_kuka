@@ -42,7 +42,7 @@
 
     <!-- load hardware interface and controller configurations -->
     <rosparam command="load" file="$(find myo_kuka)/config/vito_controllers.yaml"/>
-    <rosparam command="load" file="$(find desperate_housewife)/config/hardware_interfaces.yaml"/>
+    <rosparam command="load" file="$(find myo_kuka)/config/hardware_interfaces.yaml"/>
 
 
     <!-- #### simulation and planning -->
@@ -74,7 +74,7 @@
 
     <group if="$(arg head_enabled)">
         <!--add a copy of the robot description within the name space -->
-        <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+        <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
     </group>
 
     <!-- load the controllers in current namespace -->
@@ -84,9 +84,9 @@
 
         <group if="$(arg left_arm_enabled)">
         
-            <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+            <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
 
-            <rosparam command="load" file="$(find desperate_housewife)/config/left_arm_names.yaml" />
+            <rosparam command="load" file="$(find myo_kuka)/config/left_arm_names.yaml" />
 
             <include file="$(find lwr_hw)/launch/lwr_hw.launch">
                 <arg name="port" value="49948"/>
@@ -96,9 +96,9 @@
 
         </group>
 
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller joint_trajectory_controller"/>
 
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped joint_trajectory_controller  teleoperation_controller_mt_effort PotentialFieldControlKinematicReverseEffort"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  teleoperation_controller_mt_effort PotentialFieldControlKinematicReverseEffort"/>
 
 
     </group>
@@ -106,7 +106,7 @@
     <group ns="left_hand">
         <group if="$(arg left_hand_enabled)">
             <!--add a copy of the robot description within the name space -->
-            <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+            <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
 
             <rosparam command="load" file="$(find desperate_housewife)/config/left_hand_names.yaml" />
 
@@ -118,19 +118,15 @@
 
         <!-- load the controllers in current namespace -->
         <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
-
-        <!-- grasp estimator -->
-        <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" />
-        <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="false" output="screen" />
     </group>
 
 
     <group ns="right_arm">
 
         <group if="$(arg right_arm_enabled)">
-            <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+            <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
 
-            <rosparam command="load" file="$(find desperate_housewife)/config/right_arm_names.yaml" />
+            <rosparam command="load" file="$(find myo_kuka)/config/right_arm_names.yaml" />
 
             <include file="$(find lwr_hw)/launch/lwr_hw.launch">
                 <arg name="port" value="49939"/>
@@ -139,9 +135,9 @@
             </include>
         </group>
 
-        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller teleoperation_controller_mt"/>
+        <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="joint_state_controller joint_trajectory_controller"/>
 
-        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped joint_trajectory_controller  teleoperation_controller_mt_effort PotentialFieldControlKinematicReverseEffort"/>
+        <node name="controller_stopper" pkg="controller_manager" type="spawner" args="--stopped  teleoperation_controller_mt_effort PotentialFieldControlKinematicReverseEffort"/>
 
 
     </group>
@@ -149,7 +145,7 @@
     <group ns="right_hand">
         <group if="$(arg right_hand_enabled)">
             <!--add a copy of the robot description within the name space -->
-            <param name="robot_description" command="$(find xacro)/xacro.py $(find desperate_housewife)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
+            <param name="robot_description" command="$(find xacro)/xacro.py $(find myo_kuka)/robot/$(arg robot_name).urdf.xacro use_mimic_tag:=true"/>
 
             <rosparam command="load" file="$(find vito_description)/config/right_hand_names.yaml" />
 
@@ -162,9 +158,6 @@
         <!-- load the controllers in current namespace -->
         <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"  args="joint_state_controller joint_trajectory_controller"/>
 
-        <!-- grasp estimator -->
-        <rosparam command="load" file="$(find grasp_state_publisher)/config/softgrasp.yaml" />
-        <node name="grasp_state_publisher" pkg="grasp_state_publisher" type="grasp_state_publisher" respawn="true" output="screen" />
     </group>
 
 

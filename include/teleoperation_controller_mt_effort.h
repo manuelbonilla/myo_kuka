@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -39,6 +40,7 @@ namespace myo_kuka
 		void command(const geometry_msgs::Pose::ConstPtr &msg);
 		void command2(const geometry_msgs::Pose::ConstPtr &msg);
 		void startControllerCallBack(const std_msgs::Bool::ConstPtr& msg);
+		void StiffnessControllerCallBack(const std_msgs::Float64::ConstPtr &msg);
 
 	private:
 		ros::Subscriber sub_command_, sub_command_2;
@@ -55,7 +57,10 @@ namespace myo_kuka
 
 		Eigen::MatrixXd J_pinv_;
 		Eigen::Matrix<double,3,3> skew_;
-		double alpha1, alpha2;
+		double alpha1, alpha2, stiffness_max_;
+
+		KDL::JntArray tau_des_;
+		KDL::JntArray K_, D_;
 
 		struct quaternion_
 		{
@@ -76,7 +81,7 @@ namespace myo_kuka
 		boost::scoped_ptr<KDL::ChainDynParam> id_solver_;
 
 		ros::Publisher pub_error, pub_error2;
-		ros::Subscriber sub_start_controller;
+		ros::Subscriber sub_start_controller, stiffness_topic;
 		tf::TransformBroadcaster tf_desired_hand_pose, elbow_reference;
 	};
 
