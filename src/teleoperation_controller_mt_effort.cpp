@@ -61,7 +61,10 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
 
     cmd_flag_ = 0;
 
+    std::string listen_topic;
+    nh_.param<std::string>("listen_topic", listen_topic, "command_twist");
     sub_command_ = nh_.subscribe("command1", 1, &TeleoperationControllerMTEffort::command, this);
+    sub_command_twist = nh_.subscribe(listen_topic, 1, &TeleoperationControllerMTEffort::cb_twist, this);
     sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
     sub_start_controller = nh_.subscribe("start_controller", 1, &TeleoperationControllerMTEffort::startControllerCallBack, this);
 
@@ -84,10 +87,34 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
 
 void TeleoperationControllerMTEffort::starting(const ros::Time& time)
 {
-for (unsigned int i = 0; i < joint_handles_.size(); i++)
+    for (unsigned int i = 0; i < joint_handles_.size(); i++)
     {
         K_(i) = stiffness_max_;
     }
+
+    for (unsigned int i = 0; i < joint_handles_.size(); i++)
+    {
+        joint_msr_states_.q(i) = joint_handles_[i].getPosition();
+        joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
+        joint_des_states_.q(i) = joint_msr_states_.q(i);
+        tau_des_(i) = 0.0;
+        K_(i) = joint_stiffness_handles_[i].getPosition();
+        D_(i) = joint_damping_handles_[i].getPosition();
+    }
+
+    // computing forward kinematics
+    fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
+    fk_pos_solver_->JntToCart(joint_msr_states_.q, x_des_);
+
+    position_desired_flag =  false;
+    twist_desired_flag =  false;
+
+    twist_desired.vel(0) = 0.;
+    twist_desired.vel(1) = 0.;
+    twist_desired.vel(2) = 0.;
+    twist_desired.rot(0) = 0.;
+    twist_desired.rot(1) = 0.;
+    twist_desired.rot(2) = 0.;
 }
 
 void TeleoperationControllerMTEffort::StiffnessControllerCallBack(const std_msgs::Float64::ConstPtr &msg)
@@ -95,7 +122,7 @@ void TeleoperationControllerMTEffort::StiffnessControllerCallBack(const std_msgs
 
     for (unsigned int i = 0; i < joint_handles_.size(); i++)
     {
-        K_(i) = msg->data*stiffness_max_;
+        K_(i) = msg->data * stiffness_max_;
     }
 
 }
@@ -115,17 +142,19 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
         joint_msr_states_.q(i) = joint_handles_[i].getPosition();
     }
 
-    if (cmd_flag_)
+    jnt_to_jac_solver_->JntToJac(joint_msr_states_.q, J_);
+    fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
+
+    // computing J_pinv_
+    pseudo_inverse(J_.data, J_pinv_);
+
+    if (position_desired_flag)
     {
         // ROS_INFO_STREAM("In loop");
         // computing Jacobian
-        jnt_to_jac_solver_->JntToJac(joint_msr_states_.q, J_);
 
-        // computing J_pinv_
-        pseudo_inverse(J_.data, J_pinv_);
 
         // computing forward kinematics
-        fk_pos_solver_->JntToCart(joint_msr_states_.q, x_);
 
         // end-effector position error
 
@@ -216,25 +245,47 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
 
             q_null = alpha2 * NullSpace * x_err_2_eigen; //removed scaling factor of .7
 
-                for (int i = 0; i < J_pinv_2.rows(); i++)
+            for (int i = 0; i < J_pinv_2.rows(); i++)
             {
 
                 joint_des_states_.qdot(i) += alpha2 * q_null[i]; //removed scaling factor of .7
 
             }
-            
+
 
         }
 
         // ROS_INFO_STREAM("In loop");
-        // 
+        //
         saturateJointVelocities(joint_des_states_.qdot);
 
-         for (unsigned  int i = 0; i < joint_handles_.size(); i++)
+        for (unsigned  int i = 0; i < joint_handles_.size(); i++)
             joint_des_states_.q(i) += period.toSec() * joint_des_states_.qdot(i);
 
         saturateJointPositions(joint_des_states_.q);
 
+    }
+    else
+    {
+        if (twist_desired_flag)
+        {
+            // KDL::Frame x_local = x_.Inverse();
+            // KDL::Twist twist_desired_local = twist_desired.RefPoint(x_local.p);
+            for (int i = 0; i < J_pinv_.rows(); i++)
+            {
+                joint_des_states_.qdot(i) = 0.0;
+                for (int k = 0; k < J_pinv_.cols(); k++)
+                    joint_des_states_.qdot(i) += alpha1 * J_pinv_(i, k) * twist_desired(k); //removed scaling factor of .7
+            }
+
+            saturateJointVelocities(joint_des_states_.qdot);
+
+            for (unsigned  int i = 0; i < joint_handles_.size(); i++)
+                joint_des_states_.q(i) += period.toSec() * joint_des_states_.qdot(i);
+
+            saturateJointPositions(joint_des_states_.q);
+
+        }
     }
 
     // set controls for joints
@@ -285,6 +336,22 @@ void TeleoperationControllerMTEffort::command(const geometry_msgs::Pose::ConstPt
     tf::transformKDLToTF( frame_des_, CollisionTransform);
     tf_desired_hand_pose.sendTransform( tf::StampedTransform( CollisionTransform, ros::Time::now(), "world", "reference") );
     // cmd_flag_ = 1;
+    twist_desired_flag = 0;
+    position_desired_flag = 1;
+}
+
+
+void TeleoperationControllerMTEffort::cb_twist(const geometry_msgs::Twist::ConstPtr &msg)
+{
+    twist_desired.vel(0) = msg->linear.x;
+    twist_desired.vel(1) = msg->linear.y;
+    twist_desired.vel(2) = msg->linear.z;
+    twist_desired.rot(0) = msg->angular.x;
+    twist_desired.rot(1) = msg->angular.y;
+    twist_desired.rot(2) = msg->angular.z;
+
+    position_desired_flag = 0;
+    twist_desired_flag = 1;
 }
 
 void TeleoperationControllerMTEffort::command2(const geometry_msgs::Pose::ConstPtr &msg)

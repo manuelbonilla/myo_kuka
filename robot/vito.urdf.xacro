@@ -75,7 +75,7 @@
 
   <link name="left_hand_palm_ref_link">
       <inertial>
-        <insert_block name="negligible_inertia"/>
+        <xacro:insert_block name="negligible_inertia"/>
       </inertial>
   </link>
   <joint name="left_hand_palm_ref_joint" type="fixed">
@@ -90,7 +90,7 @@
 
   <link name="right_hand_palm_ref_link">
       <inertial>
-        <insert_block name="negligible_inertia"/>
+        <xacro:insert_block name="negligible_inertia"/>
       </inertial>
   </link>
   <joint name="right_hand_palm_ref_joint" type="fixed">
