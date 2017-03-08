@@ -148,7 +148,7 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
     // computing J_pinv_
     pseudo_inverse(J_.data, J_pinv_);
 
-    if (position_desired_flag)
+    if ( (position_desired_flag == 1) && cmd_flag_)
     {
         // ROS_INFO_STREAM("In loop");
         // computing Jacobian
@@ -267,7 +267,7 @@ void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::D
     }
     else
     {
-        if (twist_desired_flag)
+        if ((twist_desired_flag==1) && cmd_flag_)
         {
             // KDL::Frame x_local = x_.Inverse();
             // KDL::Twist twist_desired_local = twist_desired.RefPoint(x_local.p);
