@@ -64,7 +64,7 @@ bool TeleoperationControllerMTEffort::init(hardware_interface::EffortJointInterf
     std::string listen_topic;
     nh_.param<std::string>("listen_topic", listen_topic, "command_twist");
     sub_command_ = nh_.subscribe("command1", 1, &TeleoperationControllerMTEffort::command, this);
-    sub_command_twist = nh_.subscribe(listen_topic, 1, &TeleoperationControllerMTEffort::cb_twist, this);
+    sub_command_twist = nh_.subscribe(listen_topic, 1, &TeleoperationControllerMTEffort::cb_twist, this); 
     sub_command_2 = nh_.subscribe("command2", 1, &TeleoperationControllerMTEffort::command2, this);
     sub_start_controller = nh_.subscribe("start_controller", 1, &TeleoperationControllerMTEffort::startControllerCallBack, this);
 
@@ -129,7 +129,7 @@ void TeleoperationControllerMTEffort::StiffnessControllerCallBack(const std_msgs
 
 void TeleoperationControllerMTEffort::update(const ros::Time& time, const ros::Duration& period)
 {
-    nh_.param<double>("alpha1", alpha1, 1.0);
+    nh_.param<double>("alpha1", alpha1, 8.0);
     nh_.param<double>("alpha2", alpha2, 1.0);
     // ROS_INFO_STREAM("Gains alpha1: " << alpha1 << "\t alpha2: " << alpha2);
 
@@ -352,6 +352,8 @@ void TeleoperationControllerMTEffort::cb_twist(const geometry_msgs::Twist::Const
 
     position_desired_flag = 0;
     twist_desired_flag = 1;
+
+    // ROS_INFO_STREAM("Moving with twist reference");
 }
 
 void TeleoperationControllerMTEffort::command2(const geometry_msgs::Pose::ConstPtr &msg)
