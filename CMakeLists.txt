@@ -84,7 +84,7 @@ catkin_package(
 
 
 add_library(${PROJECT_NAME} 
-  src/teleoperation_controller_mt_effort.cpp 
+  src/teleoperation_controller.cpp 
   /home/manuelb/manuelb_ws/src/kuka-lwr/lwr_controllers/src/KinematicChainControllerBase.cpp
   )
 add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencpp)

@@ -1,7 +1,7 @@
 
 <library path="lib/libmyo_kuka">
 
-  <class name="myo_kuka/TeleoperationControllerMTEffort" type="myo_kuka::TeleoperationControllerMTEffort" base_class_type="controller_interface::ControllerBase">
+  <class name="myo_kuka/TeleoperationController" type="myo_kuka::TeleoperationController" base_class_type="controller_interface::ControllerBase">
     <description>
       To add some comments about the controller
     </description>
