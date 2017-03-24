@@ -66,7 +66,7 @@ void TeleoperationController::starting(const ros::Time& time)
         joint_msr_states_.q(i) = joint_handles_[i].getPosition();
         joint_msr_states_.qdot(i) = joint_handles_[i].getVelocity();
         joint_des_states_.q(i) = joint_msr_states_.q(i);
-        joint_des_states_.qdot(i) = joint_msr_states_.q(i);
+        joint_des_states_.qdot(i) = 0.0;
         tau_des_(i) = 0.0;
         K_(i) = stiffness_max_;
         D_(i) = joint_damping_handles_[i].getPosition();
